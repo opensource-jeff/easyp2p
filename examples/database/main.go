@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"easyp2p"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -16,19 +17,16 @@ func main() {
 
 	// 1. Local database
 	myDB := map[string]string{
-		"golang": "A powerful programming language.",
-		"libp2p": "A modular network stack for P2P apps.",
+		"golang":  "A powerful programming language.",
+		"libp2p":  "A modular network stack for P2P apps.",
 		"easyp2p": "A beginner friendly P2P library.",
 	}
 
 	// 2. Initialize the node
-	node, err := easyp2p.NewNode(ctx, easyp2p.DefaultConfig())
-	if err != nil {
-		panic(err)
-	}
+	node := easyp2p.Must(easyp2p.NewNode(ctx, easyp2p.DefaultConfig()))
 	defer node.Close()
 
-	fmt.Printf("My Peer ID: %s\n", node.ID())
+	node.PrintDescribe()
 
 	// 3. Set protocol for database search
 	const dbProtocol = "/easyp2p/db-search/1.0"
@@ -42,7 +40,7 @@ func main() {
 		n, _ := s.Read(queryBuf)
 		query := string(queryBuf[:n])
 		
-		fmt.Printf("Searching for: %s\n", query)
+		fmt.Printf("\nSearching for: %s\n", query)
 		
 		// Respond with result if found
 		if result, ok := myDB[query]; ok {
@@ -52,7 +50,17 @@ func main() {
 		}
 	})
 
-	// 5. Input loop for searching other nodes
+	// 5. Wait for network (optional but good for visibility)
+	go func() {
+		fmt.Println("Attempting to find peers...")
+		if err := node.WaitForNetwork(ctx, 30*time.Second); err != nil {
+			fmt.Printf("Warning: %v\n", err)
+		} else {
+			fmt.Println("Network ready! Peers found.")
+		}
+	}()
+
+	// 6. Input loop for searching other nodes
 	fmt.Println("\nEnter a Peer ID and a keyword to search (e.g. [PeerID] golang)")
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("> ")
@@ -63,7 +71,11 @@ func main() {
 			continue
 		}
 
-		targetID, _ := peer.Decode(input[0])
+		targetID, err := peer.Decode(input[0])
+		if err != nil {
+			fmt.Printf("Invalid Peer ID: %v\n", err)
+			continue
+		}
 		keyword := input[1]
 
 		fmt.Printf("Querying %s for '%s'...\n", targetID.String()[:8], keyword)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"easyp2p"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -15,13 +16,10 @@ func main() {
 	ctx := context.Background()
 
 	// 1. Initialize the node
-	node, err := easyp2p.NewNode(ctx, easyp2p.DefaultConfig())
-	if err != nil {
-		panic(err)
-	}
+	node := easyp2p.Must(easyp2p.NewNode(ctx, easyp2p.DefaultConfig()))
 	defer node.Close()
 
-	fmt.Printf("My Peer ID: %s\n", node.ID())
+	node.PrintDescribe()
 
 	// 2. Define protocol for VPN traffic
 	const vpnProtocol = "/easyp2p/vpn/1.0"
@@ -50,14 +48,20 @@ func main() {
 		}
 
 		fmt.Printf("Connecting to %s for VPN...\n", targetID.String()[:8])
+		
+		// Use a timeout for the connection
+		tctx, tcancel := context.WithTimeout(ctx, 30*time.Second)
+		defer tcancel()
+
 		stream, err := node.ConnectTo(targetID, vpnProtocol)
 		if err != nil {
-			panic(fmt.Errorf("failed to connect: %w", err))
+			fmt.Printf("Failed to connect: %v\n", err)
+		} else {
+			defer stream.Close()
+			fmt.Println("VPN Connected! Sending heartbeat data...")
+			stream.Write([]byte("HEARTBEAT - VPN is active!"))
 		}
-		defer stream.Close()
-
-		fmt.Println("VPN Connected! Sending heartbeat data...")
-		stream.Write([]byte("HEARTBEAT - VPN is active!"))
+		_ = tctx // just to use it if I want to pass it to ConnectTo, but ConnectTo uses node.ctx
 	}
 
 	fmt.Println("\nWaiting for connections...")

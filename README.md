@@ -22,20 +22,31 @@ package main
 
 import (
     "context"
+    "time"
+    "fmt"
     "easyp2p"
 )
 
 func main() {
     ctx := context.Background()
     
-    // Create a node with default settings
-    node, err := easyp2p.NewNode(ctx, easyp2p.DefaultConfig())
-    if err != nil {
-        panic(err)
-    }
+    // Create a node with default settings (automatically handles identity and peer cache)
+    node := easyp2p.Must(easyp2p.NewNode(ctx, easyp2p.DefaultConfig()))
     defer node.Close()
 
-    println("My Peer ID:", node.ID().String())
+    // Listen for NAT status changes
+    node.OnNATStatusChange(func(status easyp2p.NATStatus) {
+        fmt.Printf("NAT Status changed: %s\n", status)
+    })
+
+    // Wait for the network to be ready (at least 1 non-bootstrap peer)
+    fmt.Println("Connecting to peers...")
+    if err := node.WaitForNetwork(ctx, 30*time.Second); err != nil {
+        fmt.Println("Error:", err)
+    }
+
+    // Display node information
+    node.PrintDescribe()
 }
 ```
 
@@ -92,9 +103,20 @@ stream, _ := node.ConnectTo(peerID, dbProtocol)
 stream.Write([]byte("search-query"))
 ```
 
-## Peer Discovery 🌍
-- **Local Network**: Peers on the same Wi-Fi will find each other automatically via mDNS.
-- **Internet**: The library uses public "Bootstrap Servers" to help your node join the global P2P network. It then uses the Kademlia DHT to find other peers across the globe.
+## Security & Networking 🔐
+
+### Encryption & Authentication
+`easyp2p` uses the industry-standard **libp2p** security stack:
+- **End-to-End Encryption**: All traffic is encrypted using **Noise** or **TLS 1.3** by default.
+- **Identity (Ed25519)**: Every node is uniquely identified by an Ed25519 private key. This key is used during the cryptographic handshake to verify the `PeerID` of the other node, preventing impersonation.
+- **Identity Persistence**: By default, your node's private key is saved to `~/.config/easyp2p/identity.key`, so your `PeerID` stays the same every time you restart your application.
+
+### Peer Discovery & Connectivity
+`easyp2p` uses a multi-layered approach to help you find other peers:
+- **Local Discovery (mDNS)**: Peers on the same Wi-Fi or local network will find each other automatically without any configuration.
+- **Global Discovery (Bootstrap Servers)**: On the public internet, your node first connects to a set of stable **Bootstrap Servers** (provided by Protocol Labs). These servers act as "meeting points" to help your node join the global P2P network.
+- **Kademlia DHT**: Once connected to a bootstrap node, your node uses the **Distributed Hash Table (DHT)** to find other peers running your application anywhere in the world.
+- **NAT Traversal**: `easyp2p` automatically attempts to punch through firewalls and routers using **UPnP** and **NAT-PMP**. If a direct connection is impossible, it will automatically use **Circuit Relays** to ensure you can still communicate.
 
 ## Credits & Disclosure 🤖
 
