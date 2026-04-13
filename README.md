@@ -24,7 +24,7 @@ import (
     "context"
     "time"
     "fmt"
-    "easyp2p"
+    "github.com/opensource-jeff/easyp2p"
 )
 
 func main() {

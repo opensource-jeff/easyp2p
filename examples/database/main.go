@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"easyp2p"
+	"github.com/opensource-jeff/easyp2p"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"easyp2p"
+	"github.com/opensource-jeff/easyp2p"
 )
 
 func main() {

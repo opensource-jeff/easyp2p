@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"easyp2p/internal/identity"
-	"easyp2p/internal/peercache"
+	"github.com/opensource-jeff/easyp2p/internal/identity"
+	"github.com/opensource-jeff/easyp2p/internal/peercache"
 
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
