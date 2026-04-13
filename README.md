@@ -109,7 +109,7 @@ stream.Write([]byte("search-query"))
 `easyp2p` uses the industry-standard **libp2p** security stack:
 - **End-to-End Encryption**: All traffic is encrypted using **Noise** or **TLS 1.3** by default.
 - **Identity (Ed25519)**: Every node is uniquely identified by an Ed25519 private key. This key is used during the cryptographic handshake to verify the `PeerID` of the other node, preventing impersonation.
-- **Identity Persistence**: By default, your node's private key is saved to `~/.config/easyp2p/identity.key`, so your `PeerID` stays the same every time you restart your application.
+- **Identity Persistence**: By default, your node's private key is saved to `~/.config/easyp2p/identity.key`, so your `PeerID` stays the same every time you restart your application. You can disable this by setting `Persist: false` in your `Config`.
 
 ### Peer Discovery & Connectivity
 `easyp2p` uses a multi-layered approach to help you find other peers:
@@ -127,3 +127,10 @@ Check out the `examples/` directory for full, runnable implementations:
 - `examples/chat`: A simple IRC-style command line chat.
 - `examples/vpn`: A basic stream-based data transfer example.
 - `examples/database`: A request-response pattern for network searching.
+
+## Documentation & Wiki 📖
+For more in-depth guides, check out our [Wiki](docs/WIKI.md):
+- [Getting Started & Configuration](docs/Configuration.md)
+- [Discovery & Networking](docs/Discovery.md)
+- [Protocols & Streams](docs/Protocols-and-Streams.md)
+- [Core Concepts](CONCEPTS.md)

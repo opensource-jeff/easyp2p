@@ -14,9 +14,14 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// 1. Initialize the node with default settings
+	// 1. Initialize the node with custom settings
+	// We disable persistence to avoid Peer ID conflicts when running multiple 
+	// instances on the same machine (common for demos).
+	cfg := easyp2p.DefaultConfig()
+	cfg.Persist = false
+
 	fmt.Println("Starting chat node...")
-	node := easyp2p.Must(easyp2p.NewNode(ctx, easyp2p.DefaultConfig()))
+	node := easyp2p.Must(easyp2p.NewNode(ctx, cfg))
 	defer node.Close()
 
 	node.PrintDescribe()

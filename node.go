@@ -61,6 +61,7 @@ type Config struct {
 	EnableMDNS     bool
 	IdentityPath   string // Path to save/load the node's private key
 	PeerCachePath  string // Path to save/load known peers
+	Persist        bool   // Whether to persist identity and peer cache
 }
 
 // DefaultConfig returns a sensible default configuration.
@@ -78,6 +79,7 @@ func DefaultConfig() Config {
 		EnableMDNS:     true,
 		IdentityPath:   filepath.Join(configDir, "easyp2p", "identity.key"),
 		PeerCachePath:  filepath.Join(configDir, "easyp2p", "peers.json"),
+		Persist:        true,
 	}
 }
 
@@ -115,14 +117,19 @@ func NewNode(ctx context.Context, cfg Config) (*Node, error) {
 	}
 
 	// Load or generate identity
-	if cfg.IdentityPath != "" {
-		id, err := identity.LoadOrCreate(cfg.IdentityPath)
-		if err != nil {
-			cancel()
-			return nil, fmt.Errorf("failed to load identity: %w", err)
-		}
-		opts = append(opts, libp2p.Identity(id.PrivKey))
+	var id *identity.Identity
+	var err error
+	if cfg.Persist && cfg.IdentityPath != "" {
+		id, err = identity.LoadOrCreate(cfg.IdentityPath)
+	} else {
+		id, err = identity.Generate()
 	}
+
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed to handle identity: %w", err)
+	}
+	opts = append(opts, libp2p.Identity(id.PrivKey))
 
 	// Initialize libp2p host
 	h, err := libp2p.New(opts...)
@@ -139,8 +146,8 @@ func NewNode(ctx context.Context, cfg Config) (*Node, error) {
 		return nil, fmt.Errorf("failed to create pubsub: %w", err)
 	}
 
-	// Initialize Kademlia DHT in client mode (can be changed to server mode if needed)
-	kdht, err := dht.New(ctx, h, dht.Mode(dht.ModeAuto))
+	// Initialize Kademlia DHT in server mode so we can be discovered by others
+	kdht, err := dht.New(ctx, h, dht.Mode(dht.ModeServer))
 	if err != nil {
 		h.Close()
 		cancel()
@@ -175,16 +182,18 @@ func NewNode(ctx context.Context, cfg Config) (*Node, error) {
 	}
 
 	// Load and connect to cached peers
-	cachedPeers, err := pc.Load()
-	if err == nil && len(cachedPeers) > 0 {
-		for _, p := range cachedPeers {
-			go func(p peer.AddrInfo) {
-				tctx, tcancel := context.WithTimeout(ctx, 5*time.Second)
-				defer tcancel()
-				if err := h.Connect(tctx, p); err != nil {
-					// Silent failure for cached peers
-				}
-			}(p)
+	if cfg.Persist {
+		cachedPeers, err := pc.Load()
+		if err == nil && len(cachedPeers) > 0 {
+			for _, p := range cachedPeers {
+				go func(p peer.AddrInfo) {
+					tctx, tcancel := context.WithTimeout(ctx, 5*time.Second)
+					defer tcancel()
+					if err := h.Connect(tctx, p); err != nil {
+						// Silent failure for cached peers
+					}
+				}(p)
+			}
 		}
 	}
 
@@ -202,7 +211,9 @@ func NewNode(ctx context.Context, cfg Config) (*Node, error) {
 	}
 
 	// Start background peer cache saving
-	go node.backgroundPeerCache()
+	if cfg.Persist {
+		go node.backgroundPeerCache()
+	}
 
 	// Start NAT status polling
 	go node.backgroundNATStatus()

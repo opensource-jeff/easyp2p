@@ -55,4 +55,16 @@ Imagine you are looking for a rare book.
 - **mDNS (Local)**: Like shouting in a room. Everyone in the room (your Wi-Fi) hears you. It's **instant** but only works locally.
 - **DHT (Global)**: Like putting an ad in a global newspaper. It takes a **few seconds** to propagate, but it works anywhere in the world.
 
-`easyp2p` uses **both** automatically so your app just works!
+---
+
+## 5. Identity & Persistence 🆔
+Every node in a P2P network needs a unique "name" so others can address it. In `libp2p`, this is the **Peer ID**, which is derived from a cryptographic private key.
+
+### Persistent vs. Ephemeral
+- **Persistent (Default)**: Your private key is saved to disk. When you restart your app, you get the same Peer ID. This is crucial for long-running nodes or services where others need to find you at a consistent address.
+- **Ephemeral (Non-Persistent)**: A new random key is generated every time the app starts. This is ideal for:
+    - **Client-only nodes** that don't need a stable identity.
+    - **Multiple instances** running on the same machine (like demos or testing) to avoid Peer ID conflicts.
+    - **Privacy-focused apps** where you don't want to be tracked across sessions.
+
+In `easyp2p`, you control this with the `Persist` field in `Config`. When `Persist` is `false`, `easyp2p` generates a fresh identity in memory and skips loading any previously cached peers.

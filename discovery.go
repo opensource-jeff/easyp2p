@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+	"github.com/libp2p/go-libp2p/p2p/discovery/routing"
 	"github.com/multiformats/go-multiaddr"
 )
 
@@ -46,6 +47,21 @@ func (n *Node) bootstrap(peers []string) {
 func (n *Node) setupMDNS() error {
 	ser := mdns.NewMdnsService(n.Host, "easyp2p-discovery", &mdnsHandler{node: n})
 	return ser.Start()
+}
+
+// Advertise makes the node discoverable on a specific topic/namespace via the DHT.
+func (n *Node) Advertise(ctx context.Context, namespace string) {
+	rd := routing.NewRoutingDiscovery(n.DHT)
+	// We should ignore the error or log it, but the signature doesn't allow returning it easily
+	// and Advertise usually handles its own retries/polling if we use the right helper,
+	// but here we'll just call it.
+	_, _ = rd.Advertise(ctx, namespace)
+}
+
+// FindPeers searches for other nodes that have advertised the given namespace.
+func (n *Node) FindPeers(ctx context.Context, namespace string) (<-chan peer.AddrInfo, error) {
+	rd := routing.NewRoutingDiscovery(n.DHT)
+	return rd.FindPeers(ctx, namespace)
 }
 
 type mdnsHandler struct {

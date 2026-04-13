@@ -12,6 +12,7 @@ func TestNodeDiscoveryAndPubSub(t *testing.T) {
 
 	// 1. Create two nodes
 	cfg1 := DefaultConfig()
+	cfg1.Persist = false
 	cfg1.EnableMDNS = true
 	cfg1.BootstrapPeers = nil // No internet needed for local test
 	node1, err := NewNode(ctx, cfg1)
@@ -21,6 +22,7 @@ func TestNodeDiscoveryAndPubSub(t *testing.T) {
 	defer node1.Close()
 
 	cfg2 := DefaultConfig()
+	cfg2.Persist = false
 	cfg2.EnableMDNS = true
 	cfg2.BootstrapPeers = nil
 	node2, err := NewNode(ctx, cfg2)

@@ -3,6 +3,7 @@ package easyp2p
 import (
 	"context"
 	"fmt"
+	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
@@ -15,7 +16,7 @@ type Topic struct {
 	ctx   context.Context
 }
 
-// JoinTopic joins a PubSub topic.
+// JoinTopic joins a PubSub topic and starts discovery for other peers on the same topic.
 func (n *Node) JoinTopic(topicName string) (*Topic, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -43,6 +44,35 @@ func (n *Node) JoinTopic(topicName string) (*Topic, error) {
 	}
 
 	n.topics[topicName] = topic
+
+	// Start discovery for this topic
+	go n.Advertise(n.ctx, topicName)
+	go func() {
+		// Periodically search for new peers on this topic
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			peers, err := n.FindPeers(n.ctx, topicName)
+			if err == nil {
+				for p := range peers {
+					if p.ID == n.Host.ID() {
+						continue
+					}
+					// Attempt to connect to found peers
+					_ = n.Host.Connect(n.ctx, p)
+				}
+			}
+
+			select {
+			case <-n.ctx.Done():
+				return
+			case <-ticker.C:
+				// continue
+			}
+		}
+	}()
+
 	return topic, nil
 }
 

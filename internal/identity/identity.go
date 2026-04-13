@@ -15,6 +15,24 @@ type Identity struct {
 	PeerID  peer.ID
 }
 
+// Generate creates a new Ed25519 key pair without saving it to disk.
+func Generate() (*Identity, error) {
+	priv, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate key pair: %w", err)
+	}
+
+	id, err := peer.IDFromPrivateKey(priv)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive peer ID: %w", err)
+	}
+
+	return &Identity{
+		PrivKey: priv,
+		PeerID:  id,
+	}, nil
+}
+
 // LoadOrCreate loads an Ed25519 private key from the given path or creates a new one.
 // If the file does not exist, it generates a new key pair and saves it to the path with 0600 permissions.
 func LoadOrCreate(path string) (*Identity, error) {
