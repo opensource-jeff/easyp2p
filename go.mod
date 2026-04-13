@@ -1,4 +1,4 @@
-module easyp2p
+module github.com/opensource-jeff/easyp2p
 
 go 1.25.7
 
